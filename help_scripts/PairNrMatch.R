@@ -74,6 +74,12 @@ transl_df$pos2021[is.na(transl_df$pos2021)] =
 transl_df = transl_df[,c("pairIDbreedingNo", "pairIDbreeding", "pairIDds", "pos2021")]
 names(transl_df)[3] = "xPOS"
 
+
+
+# fix Triangle 2021 where they are not in order (see comments in dygnsstudier)
+transl_df$xPOS[29:32] = c(3, 2, 4, 1)
+
+
 write.csv(transl_df, "translateID.csv")
 
 

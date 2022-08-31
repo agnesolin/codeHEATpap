@@ -1,0 +1,16 @@
+Ledge;Date;Time;PairNr;Individual;Event;ArrNoFish;FishType;FishSize;DroppedFish;Comments
+Triangle_3;2021-07-05;15:00:00;2;F1;Start;;;;;chick
+Triangle_3;2021-07-05;15:00:00;3;F1;Start;;;;;chick
+Triangle_3;2021-07-05;15:02:46;3;F2;Arrival;x;;;;
+Triangle_3;2021-07-05;15:47:41;3;F2;Takeover;;;;;
+Triangle_3;2021-07-05;15:54:49;3;F1;Departure;;;;;
+Triangle_3;2021-07-05;18:00:19;3;F1;Arrival;;Clup;2;;
+Triangle_3;2021-07-05;18:01:37;3;F1;Takeover;;;;;
+Triangle_3;2021-07-05;18:11:33;3;F2;Departure;;;;;
+Triangle_3;2021-07-05;18:16:59;3;F2;Arrival;x;;;;
+Triangle_3;2021-07-05;19:01:48;2;F2;Arrival;;Clup;2;;
+Triangle_3;2021-07-05;19:11:59;2;F2;Takeover;;;;;
+Triangle_3;2021-07-05;19:13:42;2;F1;Departure;;;;;
+Triangle_3;2021-07-05;19:21:45;3;F2;Takeover;;;;;
+Triangle_3;2021-07-05;19:36:23;3;F1;Departure;;;;;
+Triangle_3;2021-07-05;19:50:17;2;F2;??;;Unidentified;;;19:40:12 neighbor arrives with a fish, dropped at 19:57:49, picked up 19:49:50 and then given to the chick

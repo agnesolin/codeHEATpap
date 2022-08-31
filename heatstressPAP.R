@@ -1,30 +1,37 @@
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-#### attendance ~ temperature heat stress paper ####
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+#### script for Karlsö heat stress paper ####
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-library(boot)
-library(DHARMa)
-library(dplyr)
-library(ggplot2)
-library(ggpubr)
-library(lubridate)
-library(MASS)
-library(MuMIn)
-library(showtext) # version 0.9-4
-library(rsq)
-library(plyr)
-library(reshape2)
-library(gdata)
-library(MetBrewer)
-library(mgcv)
-library(lme4)
-library(sjPlot)
+## author: Agnes Olin agnesolin@gmail.com
+## 31 August 2022
+
+library(boot) # version 1.3-28
+library(DHARMa) # version 0.4.5
+library(dplyr) # version 1.0.9
+library(ggplot2) # version 3.3.6
+library(ggpubr) # version 0.4.0
+library(lubridate) # version 1.8.0
+library(MASS) # version 7.3-57
+library(MuMIn) # version 1.46.0
+library(showtext) # version 0.9-5
+library(rsq) # version 2.5
+library(plyr) # version 1.8.7
+library(reshape2) # version 1.4.4
+library(gdata) # version 2.18.0.1
+library(MetBrewer) # version 0.2.0
+library(mgcv) # version 1.8-40
+library(lme4) # version  1.1-29
+library(sjPlot) # version 2.8.10
+library(survival) # version 3.3-1
+library(RcmdrPlugin.survival) # version 1.2-2
+library(ggnewscale) # version 0.4.7
+library(pracma) # version 2.3.8
 
 # add custom font
 font_add_google(name = "Raleway", family = "spec-font")
 showtext_auto()
 
-
+# add custom theme settings
 theme_sets = theme(
   text = element_text(family = "spec-font"),
   panel.grid.major = element_blank(),
@@ -34,70 +41,109 @@ theme_sets = theme(
   strip.background = element_rect(fill = "grey90"),
   legend.text = element_text(size = 30),
   legend.title = element_text(size = 30),
-  legend.key.width = unit(1,"cm"),
+  
   strip.text.x = element_text(size = 38),
   axis.text.x = element_text(size = 28),
-  axis.text.y = element_text(size = 28))
+  axis.text.y = element_text(size = 28),
+  legend.key.width = unit(0.5,"cm"),
+  legend.key.height  = unit(0.5,"cm"),
+  legend.spacing = unit(0, "cm")
+)
 
+
+
+
+#### load temperature data ####
+
+# load local temperature data
+temp_df = read.csv("data/Temperature_StoraKarlso.csv", sep=";")
+names(temp_df) = c("date", "temp_sun", "temp_shade")
+temp_df$time = as.POSIXlt(temp_df$date)
+temp_df$date = as.Date(temp_df$time)
+
+# load local temperature data from 2022
+temp2022 = read.csv("data/temp_2022.csv", sep = ";", fileEncoding="UTF-8-BOM")
+temp2022$time = as.POSIXlt(temp2022$time)
+temp2022$time = as.POSIXlt(temp2022$time) -  hours(1) # mistake in time
+temp2022$date = as.Date(temp2022$time)
+
+# merge temperature datasets
+temp_df = rbind(temp_df, temp2022)
 
 
 #### behaviour analysis ####
 
-behav = read.csv("data/Temp_study_30sec.csv", sep=";", header=T, fileEncoding = 'UTF-8-BOM')
+# load data
+behav = read.csv("data/thermal_behaviour.csv", sep=";", header=T, fileEncoding = 'UTF-8-BOM')
+behav$time = as.POSIXlt(paste(behav$date, behav$time))
+behav = merge(behav, temp_df, by = "time")
 
-# subset dataframe to columns of interest
-behav = behav[, c(1:2,6:10)] 
+# look at size of data
+range(table(paste0(behav$ledge, behav$time)))
+mean(table(paste0(behav$ledge, behav$time)))
+length(unique(paste0(behav$ledge, behav$time)))
 
-#change decimal separator in temperature values so Temp turns into a numerical variable
-behav$Temp = as.numeric(gsub(",",".",behav$Temp))
+# make sunniness column
+behav$sunny = 1
+behav$sunny[behav$sun_shade == "Shade"] = 0
+behav$sunny[behav$sun_shade == "Both"] = 0.5
+
 
 # calculate behaviour proportions
 prop.data = behav %>% 
-  group_by(Date,Video.time) %>% 
-  dplyr::summarise(across(2:5, mean),n=n(),Temp=max(Temp)) 
+  group_by(ledge,time) %>% 
+  dplyr::summarise(temp_shade = max(temp_shade), 
+                   sunny = mean(sunny),
+                   panting = mean(panting),
+                   raised_shoulders = mean(raised_shoulders),
+                   orientation_sun = mean(orientation_sun),
+                   n = n()) 
+
+
 
 # behaviour models
 source("help_scripts/BehavModels.R")
 
 ### plot data
 
-labels = c("Panting"="a. Panting","Raised.shoulders"="b. Spreading/drooping wings","Orientation.towards.sun"="c. Orientation towards sun")
+labels = c("panting"="a. Panting","raised_shoulders"="b. Spreading wings")
+cols = rev(met.brewer(name="Demuth",n=3,type="discrete"))
 
-
-beh.plot = ggplot(plot.behav, aes(Temp, value))+
+ggplot2::ggplot()+
   
-  geom_point(alpha = 0.4)+
+  # raw data
+  ggplot2::geom_point(data = plot.behav[plot.behav$variable != "orientation_sun",], aes(x = temp_shade, y = value, colour = sunny),alpha = 0.4) +
+  ggplot2::scale_color_gradient2(low = cols[1], mid = cols[2], high = cols[3], midpoint = 0.5, name = "") +
+  
+  ggnewscale::new_scale_color() +
   
   # line for GAM predictions
-  geom_line(aes(y = pred)) +
+  ggplot2::geom_line(data = pred.data, aes(x = temp_shade, y = pred, group = sun_shade, colour = sun_shade)) +
   
   # CI interval GAM predictions
-  geom_ribbon(aes(ymin = ymin, ymax = ymax),  alpha = .15) +
+  ggplot2::geom_ribbon(data = pred.data, aes(x = temp_shade, ymin = ymin, ymax = ymax, group = sun_shade, fill = sun_shade),  alpha = .15) +
   
+  ggplot2::scale_color_manual(values = cols, name ="Sun exposure") +
+  ggplot2::scale_fill_manual(values = cols, name = "Sun exposure") +
   
-  facet_wrap(~variable,ncol=1,labeller=labeller(variable=labels))+
+  ggplot2::facet_wrap(~variable,ncol=2,labeller=labeller(variable=labels))+
   
-  labs(y = "Behaviour probability",x = "Temperature ((\u00B0C))")+
+  ggplot2::labs(y = "Behaviour probability",x = "Temperature (\u00B0C)")+
   
-  theme_bw() + 
+  ggplot2::theme_bw(base_size = 10) + 
   
   theme_sets +
   
-  theme(strip.text.x=element_text(size = 25, hjust=0.01),
-        strip.background=element_blank(),
-        axis.title.x = element_text(size = 25),
-        axis.title.y = element_text(size = 25),
-        axis.line=element_line(colour="black"))
+  ggplot2::theme(strip.text.x=element_text(size = 40, hjust=0.01),
+                 strip.background=element_blank(),
+                 axis.title.x = element_text(size = 35),
+                 axis.title.y = element_text(size = 35),
+                 axis.line=element_line(colour="black"),
+                 legend.position = "bottom")
 
 
-png("figures/behaviour.png", 
-    width = 8.5, height = 17, units = 'cm', res = 200, pointsize = 9, family = "sans")
 
-beh.plot
-
-dev.off()
-
-
+ggsave("figures/behaviour.png", width = 18.5, height = 12, units = "cm")
 
 
 
@@ -105,18 +151,8 @@ dev.off()
 source("help_scripts/PairNrMatch.R")
 
 
-#### process dygnsstudie-data ####
+#### process data from feeding watches ####
 source("help_scripts/dsPROCESSING.R")
-
-
-#### load and plot temperature data ####
-
-temp_df = read.csv("data/Temperature_StoraKarlso.csv", sep=";")
-names(temp_df) = c("date", "temp_sun", "temp_shade")
-
-temp_df$time = as.POSIXlt(temp_df$date)
-temp_df$date = as.Date(temp_df$time)
-
 
 
 
@@ -135,283 +171,78 @@ df$day_since_egg = as.Date(df$time) - as.Date(as.POSIXlt(df$eggDate))
 
 #### visualise data ####
 
-
 # make violin plot
 
 p1 = ggplot(df, aes(x = temp, y = as.factor(presence), fill = as.factor(presence))) + 
   geom_violin() +
-  scale_fill_manual(values = met.brewer(name="Hokusai1",n=7,type="discrete")[c(1,4,5)]) +
-  labs(x = "Temperature (\u00B0C)", y = "Birds present in pair", fill = "Birds present") +
+  scale_fill_manual(values = met.brewer(name="Hokusai1",n=7,type="discrete")[c(1,4,5)], labels = c("0 birds", "1 bird", "2 birds")) +
+  labs(x = "Temperature (\u00B0C)", y = "Birds present in pair", fill = " ") +
   theme_bw() +
-  theme_sets 
+  theme_sets +
+  theme(legend.position = "none")
 p1
 
 # check min value for leaving ledge
-min(df$temp[df$presence == 0])
+min(df$temp[df$presence == 0], na.rm = T)
 
 
 
-### ordinal logistic regression ###
+#### fit gam models ####
 
-# prepare variables
-df$hour = hour(df$time) # hour of day
-df$day_since_egg = as.integer(df$day_since_egg) # no of day since laying
-df$presence_mod = as.integer(df$presence + 1)
-df$yearF = as.factor(df$year)
-df$ledge = as.factor(df$ledge)
+source("help_scripts/GAM_mods.R")
 
-# remove cases with missing data
-df = df[!is.na(df$day_since_egg) & !is.na(df$temp),]
+# figure of GAM predictions
 
-# look at sample sizes
-sort(unique(df$pairIDbreeding))
-samp = unique(data.frame(ledge =df$ledge, date = as.Date(df$time)))
-table(year(samp$date))
-length(unique(paste(df$ledge, as.Date(df$time))))*6
+plotDF$itF = factor(paste0(plotDF$it, plotDF$group))
 
-
-# fit initial gam mod
-gam.mod = gam(presence_mod ~ s(temp) + 
-                s(day_since_egg, k = 10) + 
-                s(hour, k = 6) + # k adjusted based on possible values 
-                s(yearF, bs = "re") + 
-                s(ledge, bs = "re"), 
-              family = ocat(R = 3),
-              data = df,
-              method = "REML",
-              na.action = na.fail)
-
-# gam.check
-gam.check(gam.mod)
-
-# indicates k is too low for day since egg
-# successively increase k until gam.check results look better
-
-gam.mod = gam(presence_mod ~ s(temp, k = 3) + 
-                s(day_since_egg, k = 4) + 
-                s(hour, k = 3) + # k adjusted based on possible values 
-                s(yearF, bs = "re") + 
-                s(ledge, bs = "re"), 
-              family = ocat(R = 3),
-              data = df,
-              method = "REML",
-              na.action = na.fail)
-gam.check(gam.mod)
-
-# check smooths
-plot(gam.mod, pages = 1, rug = T)
-# temp and day since eggs quite wiggly
-
-gam.mod$sp
-# temp 0.10862644
-# days since egg = 0.01432075
-# increase until they look reasonable
-
-gam.mod = gam(presence_mod ~ 
-                s(temp) + 
-                s(day_since_egg, k = 17) + 
-                s(hour, k = 6) + # k adjusted based on possible values 
-                s(yearF, bs = "re") + 
-                s(ledge, bs = "re"), 
-              family = ocat(R = 3),
-              data = df,
-              method = "REML",
-              na.action = na.fail,
-              select = T)
-plot(gam.mod, pages = 1, rug = T)
-
-
-
-# https://www.maths.ed.ac.uk/~swood34/mgcv/tampere/mgcv-advanced.pdf
-
-
-
-
-# checking concurvity
-concurvity(gam.mod, full = TRUE)
-concurvity(gam.mod, full = FALSE)
-# looks fine
-
-
-scatter.smooth(df$hour, df$temp)
-cor.test(df$temp, df$hour)
-scatter.smooth( df$day_since_egg, df$temp)
-cor.test(df$temp, df$day_since_egg)
-
-
-# how to find right level of smoothness?
-# model selection etc?
-# model assumptions incl multicollinearity
-# predictions for random effects?
-
-gam.mod = gam(presence_mod ~ s(temp, sp = 5) + 
-                s(day_since_egg, sp = 5) + 
-                s(hour, k = 6) + 
-                s(yearF, bs = "re") + 
-                s(ledge, bs = "re"), 
-              family = ocat(R = 3),
-              data = df,
-              method = "REML",
-              na.action = na.fail)
-
-
-summary(gam.mod)
-
-res = dredge(gam.mod,
-             subset = {s(yearF, bs = "re")} & {s(ledge, bs = "re")})
-
-gam.check(gam.mod)
-plot(gam.mod)
-
-
-new.data = data.frame(temp = seq(min(df$temp), max(df$temp), by = 0.1),
-                      day_since_egg = 32, # at hatching
-                      hour = 17.5, # halfway through study period
-                      ledge = "Farallon3",
-                      yearF = 2021)
-
-preds = predict(gam.mod, type = "response", newdata = new.data)
-
-preds = as.data.frame(preds)
-names(preds) = c("prob0", "prob1", "prob2")
-
-plotDF = data.frame(
-  temp = rep(new.data$temp, 3),
-  prob = c(preds$prob0, preds$prob1, preds$prob2),
-  group = as.factor(rep(c(0,1,2), each = nrow(new.data)))
+p2 = ggplot(plotDF, aes(x = temp, y = prob, colour = group, group = itF)) +
   
-)
-
-
-p2 = ggplot(plotDF, aes(x = temp, y = prob, colour = group)) +
-  geom_line(size = 1) +
-  scale_color_manual(values = met.brewer(name="Hokusai1",n=7,type="discrete")[c(1,4,5)]) +
-  labs(x = "Temperature (\u00B0C)", y = "Probability", colour = "Birds present") +
+  # model predictions
+  geom_line(size = 0.5, alpha = 0.7) +
+  scale_color_manual(values = met.brewer(name="Hokusai1",n=7,type="discrete")[c(1,4,5)], labels = c("0 birds", "1 bird", "2 birds")) +
+  
+  
+  # labels for diff lines
+  annotate("text", x = 45, y = 0.17, label = "no parent", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(1)],  size = 12, family = "spec-font") +
+  annotate("text", x = 45, y = 0.11, label = "present", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(1)],  size = 12, family = "spec-font") +
+  annotate("text", x = 25, y = 0.82 ,label = "1 parent", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(4)],  size = 12, family = "spec-font") +
+  annotate("text", x = 25, y = 0.76 ,label = "present", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(4)],  size = 12, family = "spec-font") +
+  annotate("text", x = 20, y = 0.24, label = "2 parents", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(5)],  size = 12, family = "spec-font") +
+  annotate("text", x = 20, y = 0.18, label = "present", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(5)],  size = 12, family = "spec-font") +
+  
+  
+  labs(x = "Temperature (\u00B0C)", y = "Probability", colour = " ") +
+  
   theme_bw() +
-  theme_sets
+  theme_sets +
+  theme(legend.position = "none")
 
 p2
 
 
-
 #### final plot ####
-png("figures/attendance.png", 
-    width = 30, height = 15, units = 'cm', res = 200, pointsize = 9, family = "sans")
 
 
 ggarrange(p1,p2,
           labels = c("a.", "b."),
-          font.label = list(size = 50, face = "plain", family = "spec-font"),
-          common.legend = TRUE, legend = "bottom")
+          font.label = list(size = 50, face = "plain", family = "spec-font"))
 
-dev.off()
-
+ggsave("figures/attendance.png", width = 18.5, height = 8, units = "cm")
 
 
-
-#### temperature plot ####
-
-hoburg_temp = read.csv("data/hoburg_temp.csv", sep = ";", fileEncoding="UTF-8-BOM")
-hoburg_cloud = read.csv("data/hoburg_cloud.csv", sep = ";", fileEncoding="UTF-8-BOM")
-
-
-source("help_scripts/TemperaturePlot.R")
-
-
-
-
-#### extract temperatures for heat stress-induced mortality ####
-
-
-# Farallon 3, pair 4, 06-06-2019, 19:12:16
-hoburg_temp$air_temp[hoburg_temp$date == "2019-06-06" & hoburg_temp$time == "19:00:00"]
-hoburg_cloud$cloudiness[hoburg_cloud$date == "2019-06-06" & hoburg_cloud$time == "19:00:00"]
-
-
-# Farallon 3, pair 4, 27-06-2020, 17:44:34
-temp_df$temp_sun[temp_df$time == as.POSIXlt("2020-06-27 17:44:00")]
-hoburg_temp$air_temp[hoburg_temp$date == "2020-06-27" & hoburg_temp$time == "18:00:00"]
-hoburg_cloud$cloudiness[hoburg_cloud$date == "2020-06-27" & hoburg_cloud$time == "18:00:00"]
-
-
-# Farallon 3, pair 7, 27-06-2020, 18:49:43
-temp_df$temp_sun[temp_df$time == as.POSIXlt("2020-06-27 18:50:00")]
-hoburg_temp$air_temp[hoburg_temp$date == "2020-06-27" & hoburg_temp$time == "19:00:00"]
-hoburg_cloud$cloudiness[hoburg_cloud$date == "2020-06-27" & hoburg_cloud$time == "19:00:00"]
-
-# Triangle 3, pair 2, 26-06-2020, 15:57:35
-temp_df$temp_shade[temp_df$time == as.POSIXlt("2020-06-26 15:58:00")]
-hoburg_temp$air_temp[hoburg_temp$date == "2020-06-26" & hoburg_temp$time == "16:00:00"]
-hoburg_cloud$cloudiness[hoburg_cloud$date == "2020-06-26" & hoburg_cloud$time == "16:00:00"]
-
-
-# Triangle 3, pair 3, 27-06-2020, 17:32:58
-temp_df$temp_shade[temp_df$time == as.POSIXlt("2020-06-27 17:32:00")]
-hoburg_temp$air_temp[hoburg_temp$date == "2020-06-27" & hoburg_temp$time == "18:00:00"]
-hoburg_cloud$cloudiness[hoburg_cloud$date == "2020-06-27" & hoburg_cloud$time == "18:00:00"]
+# check probabilities for both partners being present
+mean(plotDF$prob[plotDF$group == 2 & plotDF$temp == 20.029])
+mean(plotDF$prob[plotDF$group == 2 & plotDF$temp == max(plotDF$temp)])
 
 
 
 
 
+#### breeding analysis ####
 
-#### heat stress-induced mortality ####
-
-
-hoburg_temp$time = paste(hoburg_temp$date, hoburg_temp$time)
-hoburg_cloud$time = paste(hoburg_cloud$date, hoburg_cloud$time)
-
-
-weather_comp = merge(hoburg_temp, temp_df, by = "time")
-weather_comp = merge(hoburg_cloud, weather_comp, by = "time")
-
-
-ggplot(data = weather_comp, aes(x = air_temp, y = temp_shade)) +
-  geom_point()
-
-ggplot(data = weather_comp, aes(x = air_temp, y = temp_sun, col = cloudiness)) +
-  geom_point(size = 3)
-
-ggplot(data = weather_comp[hour(weather_comp$time) %in% 15:20,], aes(x = air_temp, y = temp_sun, col = cloudiness)) +
-  geom_point(size = 3)
-
-
-ggplot(data = weather_comp, aes(x = temp_shade, y = temp_sun, col = cloudiness)) +
-  geom_point(size = 3)
-
-ggplot(data = weather_comp[hour(weather_comp$time) %in% 15:20,], aes(x = temp_shade, y = temp_sun, col = cloudiness)) +
-  geom_point(size = 3)
-
-# add wind too?
-
-# add Jonas's temp predictions
-
-predTempMax = read.csv("data/~/nonSU/Karlso/heat_stress/heatstressATTENDANCE/PredictedTempsDaily2009-2021.csv")
-names(predTempMax)[1] = "date"
-predTempMax$date = as.Date(predTempMax$date)
-
-# compare with ledge data
-maxLedgeTemp = aggregate(temp_sun  ~ date, data = temp_df, FUN = max)
-maxLedgeTemp$temp_shade = aggregate(temp_shade  ~ date, data = temp_df, FUN = max)$temp_shade
-#maxLedgeTemp$Yr = year(maxLedgeTemp$date)
-#maxLedgeTemp$Day = yday(maxLedgeTemp$date)
-
-maxComp = merge(maxLedgeTemp, predTempMax, by = c("date"))
-
-ggplot(data = maxComp, aes(x = temp_sun, y = Predicted)) +
-  geom_point()+
-  geom_segment(x = 0, y = 0, xend = 50, yend = 50) +
-  theme_classic() +
-  facet_wrap(~ year(date))
-
-
-## Load Auklab breeding data ##
+## load Auklab breeding data ##
 dat = read.csv("data/breedingAukLab_211114_clean.csv", na.strings = "", sep = ";")
-dat = read.csv("data/breedingAukLab_211114_original.csv", na.strings = "", sep = ";")
-
-
-# remove some odd cases where incubation period is very short 
-dat = dat[as.Date(dat$HatchDate)-as.Date(dat$EggDate) > 20 |  is.na(dat$HatchDate), ]
+dat2022 = read.csv("data/breeding2022.csv", na.strings = "", sep = ";")
 
 
 # clean up date formats
@@ -420,6 +251,23 @@ dat$HatchDate = as.POSIXlt(dat$HatchDate)
 dat$ChickGoneDate = as.POSIXlt(dat$ChickGoneDate)
 dat$EggLossDate = as.POSIXlt(dat$EggLossDate)
 
+dat2022$EggDate = as.POSIXlt(dat2022$EggDate, format = c("%Y-%m-%d"))
+dat2022$HatchDate = as.POSIXlt(dat2022$HatchDate, format = c("%Y-%m-%d"))
+dat2022$ChickLossDate = as.POSIXlt(dat2022$ChickLossDate, format = c("%Y-%m-%d"))
+dat2022$FledgeDate = as.POSIXlt(dat2022$FledgeDate, format = c("%Y-%m-%d"))
+dat2022$EggLossDate = as.POSIXlt(dat2022$EggLossDate, format = c("%Y-%m-%d"))
+
+# combine older data with 2022 data
+
+dat2022$ChickGoneDate = dat2022$FledgeDate
+dat2022$ChickGoneDate[!is.na(dat2022$ChickLossDate)] = dat2022$ChickLossDate[!is.na(dat2022$ChickLossDate)]
+dat2022$FledgeDate = NULL; dat2022$ChickLossDate = NULL
+dat2022 = dat2022[,names(dat)]
+
+dat = rbind(dat, dat2022)
+
+# remove a couple of odd cases where incubation period is very short 
+dat = dat[as.Date(dat$HatchDate)-as.Date(dat$EggDate) > 20 |  is.na(dat$HatchDate), ]
 
 # fix pair id names
 dat$PairID = gsub("\xf6", "o", dat$PairID) 
@@ -430,6 +278,72 @@ dat$PairID = gsub("\x9a", "o", dat$PairID)
 pairs_attempts = paste(dat$PairID, dat$BrAttempt, sep = "-")
 dat$pair_attempts = pairs_attempts
 
+# sample size
+nrow(dat)
+
+# count no of failures
+sum(dat$BreedSucc == 0, na.rm = T)
+
+
+
+#### temperature plot ####
+
+hoburg_temp = read.csv("data/hoburg_temp.csv", sep = ";", fileEncoding="UTF-8-BOM")
+hoburg_cloud = read.csv("data/hoburg_cloud.csv", sep = ";", fileEncoding="UTF-8-BOM")
+
+hoburg_temp_2022 = read.delim("data/hoburg_temp_2022.csv")
+hoburg_cloud_2022 = read.csv("data/hoburg_cloud_2022.csv", sep = ";", fileEncoding="UTF-8-BOM")
+
+hoburg_temp = rbind(hoburg_temp, hoburg_temp_2022)
+hoburg_cloud = rbind(hoburg_cloud, hoburg_cloud_2022)
+
+
+
+source("help_scripts/TemperaturePlot.R")
+
+
+#### temperature comparisons Hoburg and Karlsö ####
+
+
+# fix time formats
+hoburg_temp$time = as.POSIXlt(paste(hoburg_temp$date, hoburg_temp$time), format = "%Y-%m-%d %H:%M:%S")
+hoburg_cloud$time = as.POSIXlt(paste(hoburg_cloud$date, hoburg_cloud$time), format = "%Y-%m-%d %H:%M:%S")
+
+
+# merge Hoburg data with local data
+weather_comp = merge(hoburg_temp, temp_df, by = "time")
+weather_comp = merge(hoburg_cloud, weather_comp, by = "time")
+
+
+# make comparison plots
+p1 = ggplot(data = weather_comp[hour(weather_comp$time) %in% 15:20,], aes(x = air_temp, y = temp_sun, col = cloudiness)) +
+  geom_point() +
+  scale_colour_gradient(low = "darkorange3", high = "white") +
+  labs(x = "Hoburg temperature (\u00B0C)", y = "Sun-exposed probe temperature (\u00B0C)") +
+  xlim(0, 45) +  ylim(0, 45) +
+  geom_segment(aes(x = 0, y = 0, xend = 45, yend = 45), colour = "black", size = 0.5) +
+  theme_sets
+
+
+p2 = ggplot(data = weather_comp[hour(weather_comp$time) %in% 15:20,], aes(x = air_temp, y = temp_shade, col = cloudiness)) +
+  geom_point() +
+  scale_colour_gradient(low = "darkorange3", high = "white") +
+  labs(x = "Hoburg temperature (\u00B0C)", y = "Shaded probe temperature (\u00B0C)") +
+  xlim(0, 45) +  ylim(0, 45) +
+  geom_segment(aes(x = 0, y = 0, xend = 45, yend = 45), colour = "black", size = 0.5) +
+  theme_sets
+
+ggarrange(p1, p2, ncol = 2, 
+          common.legend = T, legend = "bottom", 
+          labels = c("a.", "b."), font.label = list(size = 60, font = "spec-font"))
+
+ggsave("figures/TempComp.png", width = 18.5, height = 12, units = "cm")
+
+
+
+#### heat stress-induced mortality ####
+
+
 # loop through breeding attempts to create histories for each attempt
 
 df = data.frame() # empty df to store output
@@ -437,6 +351,8 @@ df = data.frame() # empty df to store output
 for (i in 1:length(pairs_attempts)) { # loop through breeding attempts
   
   d = subset(dat, pair_attempts == pair_attempts[i]) # subset to row for attempt 
+  
+  
   
   # identify last day with egg (hatch/loss) (count last day with egg as day before hatch day)
   eggend = ifelse(!(is.na(as.character(as.Date(d$HatchDate)-1))), as.character(as.Date(d$HatchDate)-1), ifelse(!is.na(as.character(d$EggLossDate)), as.character(d$EggLossDate), as.character(d$EggDate))) 
@@ -459,35 +375,31 @@ for (i in 1:length(pairs_attempts)) { # loop through breeding attempts
   
   df = rbind(df, df_out)
   
+  
+  
 }
 
-
-
+## create survival variable ##
 
 # add in end of attempt
 enddate = aggregate(Date ~ Pair_attempt, data = df, function(x) max(x, na.rm = TRUE)) # calculate final dates
-enddate$End = 0
-df$End = enddate[match(paste(df$Pair_attempt, df$Date), paste(enddate$Pair_attempt, enddate$Dat)), "End"]
+names(enddate) = c("Pair_attempt", "enddate")
+df = merge(df, enddate, by = "Pair_attempt")
 
+
+df$End = 0
+df$End[df$Date == df$enddate] = 1
 
 # identify whether end was loss or fledge
 success = dat[, c("pair_attempts", "BreedSucc")]
 names(success) = c("Pair_attempt", "Success")
 df = merge(df, success, by = "Pair_attempt", all.x = T)
-df$Death = ifelse(df$Success == 0 & df$End == 0, 1, 0)
-df$Death[is.na(df$Death)] = 0
+df$Death = ifelse(df$Success == 0 & df$End == 1, 1, 0)
 
 df$End = NULL
 df$Success = NULL
+df$enddate = NULL
 
-
-# some initial failure stats
-sum(df$Death)
-
-plot(
-  table(year(df$Date)[df$Death == T])/
-    table(year(df$Date)[!duplicated(df$Pair_attempt)])
-)
 
 #### look at temp effect ####
 
@@ -495,65 +407,264 @@ plot(
 df$time1 = df$breedingDay-1
 df$time2 = df$breedingDay
 
+## add weather data (assume that weather the day before is the most likely determinant of failure)
 
-# add temp
+# temp
+hoburg_temp = hoburg_temp[hoburg_temp$quality == "G",]
+hoburg_temp$time = as.POSIXct(hoburg_temp$time, format = "%Y-%m-%d %H:%M:%S")
+hoburg_temp$h = hour(hoburg_temp$time)
+hoburg_temp_max = aggregate(air_temp ~ date, data = hoburg_temp[hoburg_temp$h %in% 15:21,], max)
+hoburg_temp_max$date[year(hoburg_temp_max$date)!= 2022] = as.Date(hoburg_temp_max$date[year(hoburg_temp_max$date)!= 2022])+1 # this is so that weather variables from previous day matches up with the day that the failure is recorded (in 2022 we know exact date)
+
+# clouds
+hoburg_cloud = hoburg_cloud[hoburg_cloud$quality == "G",]
+hoburg_cloud$time = as.POSIXct(hoburg_cloud$time, format = "%Y-%m-%d %H:%M:%S")
+hoburg_cloud$h = hour(hoburg_cloud$time)
+hoburg_cloud_min = aggregate(cloudiness ~ date, data = hoburg_cloud[hoburg_cloud$h %in% 15:21,], min)
+hoburg_cloud_min$date[year(hoburg_temp_max$date)!= 2022] = as.Date(hoburg_cloud_min$date[year(hoburg_temp_max$date)!= 2022])+1 # this is so that weather variables from previous day matches up with the day that the failure is recorded (in 2022 we know exact date)
+
+# merge together
 df$date = as.Date(df$Date)
-df = merge(df, predTempMax, by = "date", all.x = T, all.y = F)
-
-# make some initial plots
-ggplot(data = df, aes(x = Predicted, y = Death)) +
-  facet_wrap(~Class) +
-  geom_point(alpha = 0.3) +
-  geom_smooth() +
-  theme_bw()
-
-ggplot(df[df$Class == "chick",], aes(x = Predicted, y=as.factor(Death))) + 
-  geom_violin() +
-  theme_bw()
-
-ggplot(df[df$Class == "egg",], aes(x = Predicted, y=as.factor(Death))) + 
-  geom_violin() +
-  theme_bw()
+df = merge(df, hoburg_temp_max, by = "date", all.x = T, all.y = F)
+df = merge(df, hoburg_cloud_min, by = "date", all.x = T, all.y = F)
 
 
-ggplot(data = df, aes(x = breedingDay, y = Death)) +
-  facet_wrap(~Class) +
-  geom_point(alpha = 0.3) +
-  geom_smooth() +
-  theme_bw()
+#### make plots checking how variables breeding day and temp relate ####
+df$Class = factor(df$Class, levels = c("egg", "chick"))
+
+ggplot(data = df, aes(x = breedingDay, y = air_temp, colour = as.factor(Death), fill = as.factor(Death))) +
+  scale_colour_manual(values =  rev(met.brewer("Veronese", 2)) , name = "Status") +
+  scale_fill_manual(values =  rev(met.brewer("Veronese", 2)) , name = "Status") +
+  facet_wrap(~Class,
+             labeller = labeller(Class = 
+                                   c("egg" = "a. Egg",
+                                     "chick" = "b. Chick"))) +
+  labs(x = "Breeding day", y = "Hoburg temperature (\u00B0C)") +
+  geom_point(alpha = 0.1, size = 0.5) +
+  geom_smooth(size = 1.2) +
+  theme_bw() +
+  theme_sets 
+
+ggsave("figures/TempSeason.jpg", width = 18.5, height = 9, units = "cm")
 
 
-ggplot(data = df, aes(x = breedingDay, y = Predicted, colour = as.factor(Death))) +
-  facet_wrap(~Class) +
-  geom_point(alpha = 0.3) +
-  geom_smooth() +
-  theme_bw()
+
+ggplot(data = df, aes(x = breedingDay, y = cloudiness, colour = as.factor(Death), fill = as.factor(Death))) +
+  scale_colour_manual(values =  rev(met.brewer("Veronese", 2)) , name = "Status") +
+  scale_fill_manual(values =  rev(met.brewer("Veronese", 2)) , name = "Status") +
+  facet_wrap(~Class,
+             labeller = labeller(Class = 
+                                   c("egg" = "a. Egg",
+                                     "chick" = "b. Chick"))) +
+  labs(x = "Breeding day", y = "Cloudiness") +
+  geom_point(alpha = 0.1, size = 0.5) +
+  geom_smooth(size = 1.2) +
+  theme_bw() +
+  theme_sets 
+
+ggsave("figures/CloudSeason.jpg", width = 18.5, height = 9, units = "cm")
 
 
-# possible effect of temperature on egg loss, but could be due to corr with time in breeding season
+# add status variable (response)
 
-# need to be explicit with assumptions re when losses occur
+df$status = as.numeric(abs(df$Death))
 
-library(survival)
-library(RcmdrPlugin.survival)
+# remove rows of missing data
+df = df[!is.na(df$air_temp) & !is.na(df$cloudiness),]
 
-df$status = as.factor(df$Death)
-df = df[!is.na(df$Predicted),]
 
-mod = coxph(Surv(time1, time2, status) ~ Predicted + Class,
-            data = df, id = Pair_attempt)
-summary(mod)
+# create side variable
+df$ledgeSide = sapply(df$Pair_attempt,  function(x) unlist(strsplit(x, "-"))[1])
+df$ledgeSun = "sunny"
+df$ledgeSun[df$ledgeSide == "Bonden"] = "mid"
+df$ledgeSun[df$ledgeSide == "Rost"] = "shady" 
+df$ledgeSun = as.factor(df$ledgeSun)
+df$ledgeSun = relevel(df$ledgeSun, ref = "shady")
 
-mod2 = coxph(Surv(time1, time2, status) ~ Predicted + Class + Predicted*Class,
-             data = df, id = Pair_attempt)
-summary(mod2)
 
-mod3 = coxph(Surv(time1, time2, status) ~ Predicted,
-             data = df[df$Class == "egg",], id = Pair_attempt)
-summary(mod3)
+# create year factor
+df$yearF = as.factor(year(df$date))
 
-mod4 = coxph(Surv(time1, time2, status) ~ Predicted,
-             data = df[df$Class == "chick",], id = Pair_attempt)
-summary(mod4)
+# create cloudiness factor
+df$cloudF = "sunny"
+df$cloudF[df$cloudiness > 20] = "shady"
+df$cloudF = as.factor(df$cloudF)
 
-plot(df[df$Class == "egg", "Predicted"], predict(mod3))
+## data exploration according to Landes et al. 2020 ##
+
+# distribution of durations to events over the observed time
+sort(df$breedingDay[df$Death == 1])
+hist(df$breedingDay[df$Death == 1], breaks = seq(0, 70, 1))
+
+# the number of failures (i.e., change of state)
+sum(df$Death) # 170 failures
+
+# the sample size
+length(unique(df$Pair_attempt))
+table(year(df$date))
+nrow(df)
+plot(
+  table(year(df$Date)[df$Death == T])/
+    table(year(df$Date)[!duplicated(df$Pair_attempt)])
+)
+
+# look at relationship between covariates
+boxplot(air_temp ~ yearF, df) # possibly small increase but looks fine
+boxplot(air_temp ~ cloudF, df) # fine (slightly warmer when sunny)
+boxplot(air_temp ~ ledgeSun, df) # fine
+
+plot(table( df$yearF, df$cloudF)) # fine
+plot(table( df$yearF, df$ledgeSun)) # slight change as auk lab fills up
+plot(table( df$ledgeSun, df$cloudF)) # fine 
+
+
+
+
+### egg models ###
+
+# subset data
+df_egg = df[df$Class == "egg",]
+
+
+mod_egg_full = coxph(Surv(time1, time2, status) ~ yearF + ledgeSun + cloudF + pspline(air_temp),
+                     data = df_egg, cluster = Pair_attempt, na.action = "na.fail")
+
+summary(mod_egg_full)
+
+# test for proportional hazards
+cox.zph(mod_egg_full) # suggests non-proportional hazards for ledgeSun
+
+
+mod_egg_full = coxph(Surv(time1, time2, status) ~ yearF + tt(ledgeSun) + cloudF + pspline(air_temp),
+                     data = df_egg, cluster = Pair_attempt, na.action = "na.fail")
+
+summary(mod_egg_full)
+
+dredge_res = dredge(mod_egg_full)
+
+tab_df(dredge_res,
+       file="dredge_egg.doc")
+
+
+mod_egg_final = coxph(Surv(time1, time2, status) ~ pspline(air_temp),
+                            data = df_egg, cluster = Pair_attempt, na.action = "na.fail")
+
+
+### plot effect ###
+
+mean_temp = mean(df$air_temp)
+plotDF = termplot(mod_egg_final, se = TRUE, plot = FALSE)
+plotDF = plotDF$air_temp
+center = with(plotDF, y[x == x[which.min(abs( x - mean_temp ))]])
+ytemp = plotDF$y + outer(plotDF$se, c(0, -1.96, 1.96), '*')
+plotDF_new = data.frame(cbind(plotDF$x, exp(ytemp - center)))
+names(plotDF_new) = c("x", "y", "ymin", "ymax")
+
+
+# interpolate data for smoother lines in plot
+xi = plotDF_new$x
+yi = plotDF_new$y
+yimin = plotDF_new$ymin
+yimax = plotDF_new$ymax
+x = seq(min(plotDF_new$x), max(plotDF_new$x), 0.01)
+
+plotDF_int = data.frame(x = x, 
+                        y = pchip(xi, yi, x),
+                        ymin = pchip(xi, yimin, x),
+                        ymax = pchip(xi, yimax, x)
+)
+
+
+ggplot(plotDF_int, aes(x, y, ymin = ymin, ymax = ymax)) +
+  geom_line(size = 0.3) +
+  geom_ribbon(alpha = 0.2) +
+  labs(x = "Temperature (\u00B0C)", y = "Relative failure rate at the egg stage") +
+  theme_bw() +
+  theme_sets
+
+ggsave("figures/survival.jpg", width = 8.5, height = 8.5, units = "cm")
+
+
+
+
+### chick models ###
+
+# subset data
+df_chick = df[df$Class == "chick",]
+
+# fix time variables
+first_chick_day = aggregate(time1 ~ Pair_attempt, df_chick, min); names(first_chick_day) = c("Pair_attempt", "day0")
+df_chick = merge(df_chick, first_chick_day)
+df_chick$time1 = df_chick$time1 - df_chick$day0
+df_chick$time2 = df_chick$time2 - df_chick$day0
+
+
+mod_chick_full = coxph(Surv(time1, time2, status) ~ yearF + ledgeSun + cloudF + pspline(air_temp), 
+                     data = df_chick, cluster = Pair_attempt, na.action = "na.fail")
+summary(mod_chick_full)
+
+# test for proportional hazards
+cox.zph(mod_chick_full) # suggests non-proportional hazards for year
+
+mod_chick_full = coxph(Surv(time1, time2, status) ~ tt(yearF) + ledgeSun + cloudF + pspline(air_temp), 
+                       data = df_chick, cluster = Pair_attempt, na.action = "na.fail")
+
+dredge_res = dredge(mod_chick_full)
+
+
+tab_df(dredge_res,
+       file="dredge_chick.doc")
+
+#### plot of timing of failures in 2020 and 2022
+
+
+sub2020 = df[year(df$date) == 2020,]
+deaths2020 = aggregate(Death ~ date, data = sub2020, sum)
+
+sub2022 = df[year(df$date) == 2022,]
+deaths2022 = aggregate(Death ~ date, data = sub2022, sum)
+
+deaths_heatwave = rbind(deaths2020, deaths2022)
+
+temp_max = aggregate(temp_sun ~ date, data = temp_df, max)
+deaths_heatwave = merge(deaths_heatwave , temp_max, by = "date")
+
+deaths_heatwave$year = year(deaths_heatwave$date)
+
+
+ggplot(deaths_heatwave, aes(date, Death)) +
+  
+  geom_rect( 
+    aes(xmin = date-0.5, xmax = date+0.5, ymin = 0, ymax = 6.2, fill = temp_sun), alpha = 0.6) +
+  geom_line() +
+  
+  scale_fill_gradientn(colours = rev(met.brewer("Greek", 10)),
+                       name = "Temperature (\u00B0C)") +
+  
+  
+  labs(x = "Day of year", y = "Recorded failures") +
+  
+  facet_wrap(~ year
+             ,
+             labeller = labeller(year = 
+                                   c(
+                                     "2020" = "a. 2020",
+                                     
+                                     "2022" = "b. 2022")),
+             scale = "free_x",
+             ncol = 1) +
+  
+  theme_bw() +
+  theme_sets
+
+ggsave("figures/plot2020.jpg", width = 18.5, height = 12, units = "cm")
+
+
+
+
+
+table(sub2020$yday)
+9/53 # losses during heatwave
+
+
+

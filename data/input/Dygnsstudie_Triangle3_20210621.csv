@@ -1,0 +1,16 @@
+Ledge;Date;Time;PairNr;Individual;Event;ArrNoFish;FishType;FishSize;DroppedFish;Comments
+Triangle_3;2021-06-21;15:00:00;2;F1;Start;;;;; egg
+Triangle_3;2021-06-21;15:00:00;3;F1;Start;;;;;chick
+Triangle_3;2021-06-21;16:38:35;3;F2;Arrival;;Clup;2;;
+Triangle_3;2021-06-21;16:52:33;3;F2;Takeover;;;;;
+Triangle_3;2021-06-21;16:52:49;3;F1;Departure;;;;;
+Triangle_3;2021-06-21;16:27:46;3;F1;Arrival;x;;;;
+Triangle_3;2021-06-21;16:34:30;3;F1;Takeover;;;;;
+Triangle_3;2021-06-21;16:36:22;3;F2;Departure;;;;;
+Triangle_3;2021-06-21;18:18:49;3;F2;Arrival;x;;;;
+Triangle_3;2021-06-21;18:19:14;3;F2;Takeover;;;;;
+Triangle_3;2021-06-21;18:19:40;3;F1;Departure;;;;;
+Triangle_3;2021-06-21;18:46:31;2;F1;Departure;;;;;Egg alone! The shape saved the egg!?
+Triangle_3;2021-06-21;19:02:40;2;F1;Arrival;x;;;;NOTE 19:01:21 bird arrives with weird deformations close to beak.
+Triangle_3;2021-06-21;19:03:23;2;F1;Departure;;;;;chased off by bird with weird face
+Triangle_3;2021-06-21;19:05:10;2;F1;Arrival;x;;;;

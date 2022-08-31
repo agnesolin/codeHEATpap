@@ -1,0 +1,16 @@
+Ledge;Date;Time;PairNr;Individual;Event;ArrNoFish;FishType;FishSize;DroppedFish;Comments
+Triangle_3;2021-06-25;15:00:00;2;F1;Start;;;;;chick!
+Triangle_3;2021-06-25;15:00:00;3;F1;Start;;;;;chick
+Triangle_3;2021-06-25;19:03:03;3;F2;Arrival;;Clup;3;;
+Triangle_3;2021-06-25;19:04:29;3;F2;Takeover;;;;;
+Triangle_3;2021-06-25;19:05:45;3;F1;Takeover;;;;;
+Triangle_3;2021-06-25;19:17:41;3;F2;Departure;;;;;
+;;;;;;;;;;
+;;;;;;;;;;
+;;;;;;;;;;
+;;;;;;;;;;
+;;;;;;;;;;
+;;;;;;;;;;
+;;;;;;;;;;
+;;;;;;;;;;
+;;;;;;;;;;

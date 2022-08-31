@@ -6,7 +6,7 @@
 
 #### initial setup ####
 
-inputpath = "~/nonSU/Karlso/heat_stress/heatstressATTENDANCE/input"
+inputpath = "data/input"
 
 #### main loop ####
 
@@ -14,11 +14,32 @@ inputpath = "~/nonSU/Karlso/heat_stress/heatstressATTENDANCE/input"
 start_time = "15:00:00" # start time of obs in hours:minutes
 end_time = "20:59:59" # one second before end time of obs in hours:minutes:seconds
 
-# List all input files in directory
+# list all input files in directory
 files = list.files(inputpath); files = files[substr(files, 1, 1) != "~"]
 
 
+
+# check for comments that may be important
+comm_df = data.frame()
+
+for(f in 1:length(files)) {
+  df = read.csv(paste0(inputpath, "/", files[f]), sep = ";");  df = droplevels(df)
+  
+  comms = unique(df$Comments)
+  comms = comms[comms != "" & !is.na(comms)]
+  
+  if(length(comms) != 0) comm_df = rbind(comm_df, data.frame(file = files[f],  comm = comms))
+  
+}
+
+
+
+
 # Loop for each file (one file per Date and Ledge)
+
+
+
+
 
 mega_df = data.frame()
 
@@ -76,15 +97,36 @@ for(f in 1:length(files)) {
     }
     
     
-    
-    
     main_df = rbind(main_df, presence_df)
-    
-    
+
     
     
   }
   main_df = main_df[order(main_df$time),]
+  
+  
+  # fix case were pair loses egg in middle
+  if(files[f] == "Dygnsstudie_Farallon3_20200627.csv"){
+    
+    main_df = main_df[!(main_df$pairIDds == 7 & 
+                        main_df$time > "2020-06-27 18:49:00 CEST"),]
+  }
+  
+  # fix cases were video is not complete
+  if(files[f] == "Dygnsstudie_Farallon3_20210615.csv"){
+    main_df = main_df[!(main_df$time > "2021-06-15 20:47:00 CEST"),]}
+  if(files[f] == "Dygnsstudie_Triangle3_20200702.csv"){
+    main_df = main_df[!(main_df$time < "2020-07-02 15:12:00 CEST"),]}
+  if(files[f] == "Dygnsstudie_Triangle3_20210615.csv"){
+    main_df = main_df[!(main_df$time > "2021-06-15 20:47:00 CEST"),]}
+  
+  # remove pair where chick is being ringed
+  if(files[f] == "Dygnsstudie_Triangle3_20210627.csv"){
+    main_df = main_df[!(main_df$pairIDds == 3),]}
+  
+  
+  
+  
   
   mega_df = rbind(mega_df, main_df)
 }
@@ -98,7 +140,6 @@ presence_df$pairIDds = as.numeric(presence_df$pairIDds)
 rm(df, df_sub, main_df, mega_df,  end_time, f, files, inputpath, no_pairs, p, start_time, t, time)
 
 
-# need to make sure it contains info so that it can be matched up with breeding data
 
 
 

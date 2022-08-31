@@ -1,0 +1,45 @@
+Ledge;Date;Time;PairNr;Individual;Event;ArrNoFish;FishType;FishSize;DroppedFish;Comments
+Farallon_3;2021-06-21;15:00:00;1;F1;Start;;;;;has a CHICK
+Farallon_3;2021-06-21;15:00:00;2;F1;Start;;;;;has a CHICK
+Farallon_3;2021-06-21;15:00:00;3;F1;Start;;;;;has a CHICK
+Farallon_3;2021-06-21;15:00:00;6;F1;Start;;;;;has a CHICK
+Farallon_3;2021-06-21;15:00:00;7;F1;Start;;;;;has a CHICK
+Farallon_3;2021-06-21;15:23:17;2;F2;Arrival;;Clup;2;;
+Farallon_3;2021-06-21;15:23:59;3;F2;Arrival;;Clup;3;;
+Farallon_3;2021-06-21;15:25:25;2;F2;Takeover;;;;;
+Farallon_3;2021-06-21;15:28:21;2;F1;Departure;;;;;
+Farallon_3;2021-06-21;15:31:19;3;F2;Departure;;;;;
+Farallon_3;2021-06-21;17:51:24;6;F2;Arrival;;Clup;2;x;
+Farallon_3;2021-06-21;17:52:29;6;F2;Takeover;;;;;
+Farallon_3;2021-06-21;17:53:39;6;F1;Departure;;;;;
+Farallon_3;2021-06-21;18:00:08;6;F1;Arrival;x;;;;
+Farallon_3;2021-06-21;18:01:49;6;F1;Departure;;;;;
+Farallon_3;2021-06-21;18:11:05;3;F2;Arrival;;Clup;1;;
+Farallon_3;2021-06-21;18:12:59;3;F2;Takeover;;;;;
+Farallon_3;2021-06-21;18:13:18;3;F1;Departure;;;;;
+Farallon_3;2021-06-21;18:26:24;3;F1;Arrival;x;;;;
+Farallon_3;2021-06-21;18:27:28;3;F1;Takeover;;;;;
+Farallon_3;2021-06-21;18:31:36;7;F2;Arrival;;Clup;2;;
+Farallon_3;2021-06-21;18:32:26;7;F2;Takeover;;;;;
+Farallon_3;2021-06-21;18:32:42;7;F1;Departure;;;;;
+Farallon_3;2021-06-21;18:34:59;3;F2;Departure;;;;;
+Farallon_3;2021-06-21;19:19:45;1;F2;Arrival;x;;;;
+Farallon_3;2021-06-21;19:20:45;1;F2;Takeover;;;;;
+Farallon_3;2021-06-21;19:21:40;1;F1;Departure;;;;;
+Farallon_3;2021-06-21;19:35:35;7;F1;Arrival;;Clup;2;x;
+Farallon_3;2021-06-21;19:36:06;7;F1;Takeover;;;;;
+Farallon_3;2021-06-21;19:37:15;7;F2;Departure;;;;;
+Farallon_3;2021-06-21;19:49:48;1;F1;Arrival;;Unidentified;;;
+Farallon_3;2021-06-21;20:29:07;7;F2;Arrival;x;;;;
+Farallon_3;2021-06-21;20:35:13;7;F2;Takeover;;;;;
+Farallon_3;2021-06-21;20:36:21;7;F1;Departure;;;;;
+Farallon_3;2021-06-21;20:58:57;2;F1;Arrival;;Clup;2;;
+;;;;;;;;;;
+;;;;;;;;;;
+;;;;;;;;;;
+;;;;;;;;;;
+;;;;;;;;;;
+;;;;;;;;;;
+;;;;;;;;;;
+;;;;;;;;;;
+;;;;;;;;;;

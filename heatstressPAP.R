@@ -83,6 +83,12 @@ range(table(paste0(behav$ledge, behav$time)))
 mean(table(paste0(behav$ledge, behav$time)))
 length(unique(paste0(behav$ledge, behav$time)))
 
+# check consistency
+behav$any = as.numeric(rowSums(behav[, c("panting", "raised_shoulders", "orientation_sun")]) > 0)
+consistency = aggregate(any ~ as.factor(time) + temp_shade + sun_shade, data = behav, mean)
+sum(consistency$any %in% c(0,1))/nrow(consistency)
+
+
 # make sunniness column
 behav$sunny = 1
 behav$sunny[behav$sun_shade == "Shade"] = 0
@@ -157,25 +163,30 @@ source("help_scripts/dsPROCESSING.R")
 
 
 #### create final data frame ####
-pair_info_df$ledge[pair_info_df$ledge == "Rost3"] = "R?st3"
+presence_df$ledge[presence_df$ledge == "Röst3"] = "Rost3"
 df = left_join(presence_df, pair_info_df, by = c("year", "ledge", "pairIDds"))
 df$pairIDds = NULL; df$pairIDbreedingNo = NULL
 
 df = left_join(df, temp_df, by = "time")
 df$temp = df$temp_shade
-df$temp[df$ledge == "Farallon3"] = df$temp_sun[df$ledge == "Farallon3"]
 
 df$day_since_egg = as.Date(df$time) - as.Date(as.POSIXlt(df$eggDate))
 
+# check sample sizes #
+table(df$pairIDbreeding, df$year)
+sub = df[!duplicated(paste(df$ledge, df$date)),]
+table(sub$year)
+nrow(sub)*6
 
 
 #### visualise data ####
 
 # make violin plot
 
-p1 = ggplot(df, aes(x = temp, y = as.factor(presence), fill = as.factor(presence))) + 
+p1 = ggplot(df, aes(x = temp, y = as.factor(presence), fill = as.factor(presence), colour = as.factor(presence))) + 
   geom_violin() +
   scale_fill_manual(values = met.brewer(name="Hokusai1",n=7,type="discrete")[c(1,4,5)], labels = c("0 birds", "1 bird", "2 birds")) +
+  scale_colour_manual(values = met.brewer(name="Hokusai1",n=7,type="discrete")[c(1,4,5)], labels = c("0 birds", "1 bird", "2 birds")) +
   labs(x = "Temperature (\u00B0C)", y = "Birds present in pair", fill = " ") +
   theme_bw() +
   theme_sets +
@@ -184,7 +195,6 @@ p1
 
 # check min value for leaving ledge
 min(df$temp[df$presence == 0], na.rm = T)
-
 
 
 #### fit gam models ####
@@ -203,12 +213,12 @@ p2 = ggplot(plotDF, aes(x = temp, y = prob, colour = group, group = itF)) +
   
   
   # labels for diff lines
-  annotate("text", x = 45, y = 0.17, label = "no parent", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(1)],  size = 12, family = "spec-font") +
-  annotate("text", x = 45, y = 0.11, label = "present", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(1)],  size = 12, family = "spec-font") +
-  annotate("text", x = 25, y = 0.82 ,label = "1 parent", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(4)],  size = 12, family = "spec-font") +
-  annotate("text", x = 25, y = 0.76 ,label = "present", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(4)],  size = 12, family = "spec-font") +
-  annotate("text", x = 20, y = 0.24, label = "2 parents", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(5)],  size = 12, family = "spec-font") +
-  annotate("text", x = 20, y = 0.18, label = "present", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(5)],  size = 12, family = "spec-font") +
+  annotate("text", x = 17, y = 0.04, label = "no parent present", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(1)],  size = 12, family = "spec-font") +
+  #annotate("text", x = 26.5, y = 0.11, label = "present", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(1)],  size = 12, family = "spec-font") +
+  annotate("text", x = 20, y = 0.82 ,label = "1 parent", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(4)],  size = 12, family = "spec-font") +
+  annotate("text", x = 20, y = 0.76 ,label = "present", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(4)],  size = 12, family = "spec-font") +
+  annotate("text", x = 25, y = 0.22, label = "2 parents", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(5)],  size = 12, family = "spec-font") +
+  annotate("text", x = 25, y = 0.16, label = "present", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(5)],  size = 12, family = "spec-font") +
   
   
   labs(x = "Temperature (\u00B0C)", y = "Probability", colour = " ") +
@@ -227,12 +237,13 @@ ggarrange(p1,p2,
           labels = c("a.", "b."),
           font.label = list(size = 50, face = "plain", family = "spec-font"))
 
-ggsave("figures/attendance.png", width = 18.5, height = 8, units = "cm")
+ggsave("figures/attendance.png", width = 18.5, height = 9, units = "cm")
 
 
 # check probabilities for both partners being present
-mean(plotDF$prob[plotDF$group == 2 & plotDF$temp == 20.029])
+mean(plotDF$prob[plotDF$group == 2 & plotDF$temp == min(plotDF$temp)])
 mean(plotDF$prob[plotDF$group == 2 & plotDF$temp == max(plotDF$temp)])
+max(plotDF$temp)
 
 
 
@@ -487,7 +498,7 @@ df$yearF = as.factor(year(df$date))
 
 # create cloudiness factor
 df$cloudF = "sunny"
-df$cloudF[df$cloudiness > 20] = "shady"
+df$cloudF[df$cloudiness > 25] = "cloudy"
 df$cloudF = as.factor(df$cloudF)
 
 ## data exploration according to Landes et al. 2020 ##

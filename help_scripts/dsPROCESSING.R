@@ -47,7 +47,7 @@ for(f in 1:length(files)) {
   
   # Read file
   df = read.csv(paste0(inputpath, "/", files[f]), sep = ";");  df = droplevels(df)
-  df = df[!is.na(df$PairNr) & df$Event %in% c("Start", "Departure", "Arrival"),]
+  df = df[!is.na(df$PairNr) & df$PairNr != "<NA>" & df$Event %in% c("Start", "Departure", "Arrival"),]
   
   no_pairs = max(df$PairNr, na.rm= T)
   

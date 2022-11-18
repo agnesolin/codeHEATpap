@@ -33,13 +33,31 @@ ggplot(df, aes(day_since_egg, temp)) +
   geom_point(alpha = 0.3) +
   geom_smooth()
 
+ggplot(df, aes(day_since_egg, presence_mod)) + # not much of an effect
+  geom_point(alpha = 0.3) +
+  geom_smooth()
+
 ggplot(df, aes(hour, temp)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(formula = y ~ s(x, bs = "cs", k = 5))
+
+ggplot(df, aes(hour, presence_mod)) + # not much of an effect
   geom_point(alpha = 0.3) +
   geom_smooth(formula = y ~ s(x, bs = "cs", k = 5))
 
 
 # empty data for qq data
 qq_data = data.frame()
+
+
+# new prediction data
+new.data = data.frame(temp = seq(min(df$temp), max(df$temp), by = 0.1),
+                      hour = 18,
+                      day_since_egg = 32,
+                      id = "Farallon-3-2021-1") # random choice, does not impact predictions
+
+# empty df for plotting data
+plotDF = data.frame()
 
 
 for(it in 1:100){ # 100 iterations
@@ -59,9 +77,19 @@ for(it in 1:100){ # 100 iterations
   }
   
   
-  # fit gam mod
-  gam.mod = gam(presence_mod ~ 
+  # fit gam mod with temp
+  gam.mod.temp = gam(presence_mod ~ 
                   s(temp, k = 3) + # temp effect, restrict to cubic
+                  s(day_since_egg, k = 5) + # effect of day since egg - allow more flexible shape
+                  s(hour, k = 3) +  # effect of hour, restrict to cubic
+                  s(id, bs = "re"), # random effect of pair id
+                family = ocat(R = 3),
+                data = new_df,
+                method = "REML",
+                na.action = na.fail)
+  
+  # fit gam mod without temp
+  gam.mod.ref = gam(presence_mod ~ 
                   s(day_since_egg, k = 5) + # effect of day since egg - allow more flexible shape
                   s(hour, k = 3) +  # effect of hour, restrict to cubic
                   s(id, bs = "re"), # random effect of pair id
@@ -72,42 +100,40 @@ for(it in 1:100){ # 100 iterations
   
   
   # save model comparison data
-  res = dredge(gam.mod,
-               subset = {s(id, bs = "re")})
+  dredge_res = c(dredge_res, AIC(gam.mod.ref)-AIC(gam.mod.temp))
+                     
+  # make and store predictions
+  preds = as.data.frame(predict(gam.mod.temp, type = "response", newdata = new.data, exclude = "s(id)"))
+  names(preds) = c("prob0", "prob1", "prob2")
   
-  dredge_res = rbind(dredge_res, 
+  plotDF = rbind(plotDF,
+                 
+                 data.frame(
+                   temp = rep(new.data$temp, 3),
+                   prob = c(preds$prob0, preds$prob1, preds$prob2),
+                   group = as.factor(rep(c(0,1,2), each = nrow(new.data))),
+                   it = it
+                 ))
+  
                      
-                     data.frame(days  = res$`s(day_since_egg, k = 5)`,
-                                hour = res$`s(hour, k = 3)`,
-                                temp = res$`s(temp, k = 3)`,
-                                delta = res$delta)
-                     
-                     
-                     )
   
   # save concurvity data
   conc_res = rbind(conc_res,
-  concurvity(gam.mod, full = TRUE))
+  concurvity(gam.mod.temp, full = TRUE))
   
   # save qq-data
   qq_data = rbind(qq_data, 
                   data.frame(
-                    theo_quant = qq.gam(gam.mod),
-                    resid =  sort(residuals.gam(gam.mod, type = "deviance"))
+                    theo_quant = qq.gam(gam.mod.temp),
+                    resid =  sort(residuals.gam(gam.mod.temp, type = "deviance"))
                   ))
   
 }
 
 
 # summarise model comparison results
-sum(!is.na(dredge_res[dredge_res$delta <= 4,]$days))/nrow( dredge_res[dredge_res$delta <= 4,])
-sum(!is.na(dredge_res[dredge_res$delta <= 4,]$hour))/nrow(dredge_res[dredge_res$delta <= 4,])
-sum(!is.na(dredge_res[dredge_res$delta <= 4,]$temp))/nrow( dredge_res[dredge_res$delta <= 4,])
-
-mean(dredge_res$delta[!is.na(dredge_res$temp)])
-mean(dredge_res$delta[!is.na(dredge_res$days)])
-mean(dredge_res$delta[!is.na(dredge_res$hour)])
-
+mean(unlist(dredge_res))
+sd(unlist(dredge_res))
 
 # checking concurvity
 colMeans(conc_res[substr(rownames(conc_res), 1,1) == "w", ])
@@ -127,63 +153,9 @@ ggsave("figures/qq_GAM.png", width = 10, height = 10, units = "cm")
 
 
 
-
-
-#### repeat fitting with "best model" + make visualisation ####
-
-# new prediction data
-new.data = data.frame(temp = seq(min(df$temp), max(df$temp), by = 0.1),
-                      id = "Farallon-3-2021-1") # random choice, does not impact predictions
-
-# empty df for plotting data
-plotDF = data.frame()
-
-
-
-for(it in 1:100){ # 100 iterations
-  
-  print(it) # print iteration
-  set.seed(it) # set seed so that results can be reproduced
-  
-  new_df = data.frame() # empty data frame to store generated data
-  
-  for(i in 1:nrow(subsamp)){ # loop through unique combinations, sample data and tie together
-    
-    sub = df[df$pairIDbreeding == subsamp$id[i] & df$date == subsamp$date[i] & df$hour == subsamp$hour[i], ]
-    
-    ranRow = sub[sample(1:nrow(sub), 1),]
-    
-    new_df = rbind(new_df, ranRow)
-  }
-  
-  
-  # fit gam mod
-  gam.mod = gam(presence_mod ~ 
-                  s(temp, k = 3) + # temp effect, restrict to cubic
-                  s(id, bs = "re"), # random effect of pair id
-                family = ocat(R = 3),
-                data = new_df,
-                method = "REML",
-                na.action = na.fail)
-  
-  # make and store predictions
-  preds = as.data.frame(predict(gam.mod, type = "response", newdata = new.data, exclude = "s(id)"))
-  names(preds) = c("prob0", "prob1", "prob2")
-  
-  plotDF = rbind(plotDF,
-                 
-                 data.frame(
-                   temp = rep(new.data$temp, 3),
-                   prob = c(preds$prob0, preds$prob1, preds$prob2),
-                   group = as.factor(rep(c(0,1,2), each = nrow(new.data))),
-                   it = it
-                 ))
-  
-
-  
-  
-}
-
 set.seed(seed = NULL)
 
+
+mean(plotDF$prob[plotDF$group == 2 & plotDF$temp == 12])
+mean(plotDF$prob[plotDF$group == 2 & plotDF$temp == max(plotDF$temp)])
 

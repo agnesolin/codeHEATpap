@@ -58,11 +58,11 @@ mean(orientation_data$orientation_sun)
 
 # diagnostic plots -look at residuals/ appropriateness of model structure
 png("figures/behaviour_residuals.png", 
-    width = 18.5, height = 7, units = 'cm', res = 150, family = "sans")
-par(mfrow = c(1,3))
-plotQQunif(simres1) # look at residuals/ appropriateness of model structure
-plotQQunif(simres2) # look at residuals/ appropriateness of model structure
-plotQQunif(simres3) # look at residuals/ appropriateness of model structure
+    width = 18.5, height = 18.5, units = 'cm', res = 300, family = "sans")
+par(mfrow = c(2,2))
+plotQQunif(simres1, cex.main = 3, cex.axis = 2, cex.lab = 3, main = "a. QQ panting", testUniformity = F, testOutliers = F, testDispersion = F) # look at residuals/ appropriateness of model structure
+plotQQunif(simres2, cex.main = 3, cex.axis = 2, cex.lab = 3, main = "b. QQ wing spreading", testUniformity = F, testOutliers = F, testDispersion = F) # look at residuals/ appropriateness of model structure
+plotQQunif(simres3, cex.main = 3, cex.axis = 2, cex.lab = 3, main = "c. QQ facing sun", testUniformity = F, testOutliers = F, testDispersion = F) # look at residuals/ appropriateness of model structure
 dev.off()
 
 
@@ -79,7 +79,7 @@ plot.behav = plot.data %>%
 ## mod 1 ##
 
 # model prediction data 
-pred.data = expand.grid(temp_shade = floor(min(behav$temp_shade)):ceiling(max(behav$temp_shade)), sun_shade = c("Shade", "Both", "Sun"))
+pred.data = expand.grid(temp_shade = seq(floor(min(behav$temp_shade)), ceiling(max(behav$temp_shade)), 0.1), sun_shade = c("Shade", "Both", "Sun"))
 
 # model prediction model 1
 p = predict(model1, 

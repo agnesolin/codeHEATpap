@@ -88,7 +88,6 @@ behav$any = as.numeric(rowSums(behav[, c("panting", "raised_shoulders", "orienta
 consistency = aggregate(any ~ as.factor(time) + temp_shade + sun_shade, data = behav, mean)
 sum(consistency$any %in% c(0,1))/nrow(consistency)
 
-
 # make sunniness column
 behav$sunny = 1
 behav$sunny[behav$sun_shade == "Shade"] = 0
@@ -119,18 +118,21 @@ ggplot2::ggplot()+
   
   # raw data
   ggplot2::geom_point(data = plot.behav[plot.behav$variable != "orientation_sun",], aes(x = temp_shade, y = value, colour = sunny),alpha = 0.4) +
-  ggplot2::scale_color_gradient2(low = cols[1], mid = cols[2], high = cols[3], midpoint = 0.5, name = "") +
+  ggplot2::scale_color_gradient2(low = cols[1], mid = cols[2], high = cols[3], midpoint = 0.5, name = "Average exposure",
+                                 breaks = c(0, 0.5, 1), labels = c("shade", "mix", "sun")) +
+  
+  guides(colour = guide_legend(title.position="top", title.hjust = 0.5)) +
   
   ggnewscale::new_scale_color() +
   
-  # line for GAM predictions
+  # line for predictions
   ggplot2::geom_line(data = pred.data, aes(x = temp_shade, y = pred, group = sun_shade, colour = sun_shade)) +
   
   # CI interval GAM predictions
   ggplot2::geom_ribbon(data = pred.data, aes(x = temp_shade, ymin = ymin, ymax = ymax, group = sun_shade, fill = sun_shade),  alpha = .15) +
   
-  ggplot2::scale_color_manual(values = cols, name ="Sun exposure") +
-  ggplot2::scale_fill_manual(values = cols, name = "Sun exposure") +
+  ggplot2::scale_color_manual(values = cols, name ="Individual exposure", labels = c("shade", "mix", "sun")) +
+  ggplot2::scale_fill_manual(values = cols, name = "Individual exposure", labels = c("shade", "mix", "sun")) +
   
   ggplot2::facet_wrap(~variable,ncol=2,labeller=labeller(variable=labels))+
   
@@ -138,18 +140,22 @@ ggplot2::ggplot()+
   
   ggplot2::theme_bw(base_size = 10) + 
   
-  theme_sets +
+  theme_sets  +
+  guides(colour = guide_legend(title.position="top", title.hjust = 0.5)) +
   
   ggplot2::theme(strip.text.x=element_text(size = 40, hjust=0.01),
                  strip.background=element_blank(),
                  axis.title.x = element_text(size = 35),
                  axis.title.y = element_text(size = 35),
                  axis.line=element_line(colour="black"),
-                 legend.position = "bottom")
+                 legend.position = "bottom",
+                 legend.margin = margin(0,1.5,0,1.5, unit="cm"),
+                 legend.spacing.y = unit(0.3, 'cm'),
+                 legend.spacing.x = unit(0.3, 'cm'))
 
 
 
-ggsave("figures/behaviour.png", width = 18.5, height = 12, units = "cm")
+ggsave("figures/behaviour.png", width = 18.5, height = 11, units = "cm")
 
 
 
@@ -185,12 +191,14 @@ nrow(sub)*6
 
 p1 = ggplot(df, aes(x = temp, y = as.factor(presence), fill = as.factor(presence), colour = as.factor(presence))) + 
   geom_violin() +
-  scale_fill_manual(values = met.brewer(name="Hokusai1",n=7,type="discrete")[c(1,4,5)], labels = c("0 birds", "1 bird", "2 birds")) +
-  scale_colour_manual(values = met.brewer(name="Hokusai1",n=7,type="discrete")[c(1,4,5)], labels = c("0 birds", "1 bird", "2 birds")) +
+  scale_fill_manual(values = met.brewer(name="Hokusai1",n=7,type="discrete")[c(1,4,5)], labels = c("0", "1", "2"), name = "Parents present") +
+  scale_colour_manual(values = met.brewer(name="Hokusai1",n=7,type="discrete")[c(1,4,5)], labels = c("0", "1", "2"), name = "Parents present") +
   labs(x = "Temperature (\u00B0C)", y = "Birds present in pair", fill = " ") +
   theme_bw() +
   theme_sets +
-  theme(legend.position = "none")
+  theme(legend.spacing.y = unit(0.3, 'cm'),
+        legend.spacing.x = unit(0.3, 'cm'),
+        legend.position = "bottom")
 p1
 
 # check min value for leaving ledge
@@ -215,13 +223,13 @@ p2 = ggplot(plotDF, aes(x = temp, y = prob, colour = group, group = itF)) +
   # labels for diff lines
   annotate("text", x = 17, y = 0.04, label = "no parent present", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(1)],  size = 12, family = "spec-font") +
   #annotate("text", x = 26.5, y = 0.11, label = "present", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(1)],  size = 12, family = "spec-font") +
-  annotate("text", x = 20, y = 0.82 ,label = "1 parent", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(4)],  size = 12, family = "spec-font") +
-  annotate("text", x = 20, y = 0.76 ,label = "present", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(4)],  size = 12, family = "spec-font") +
+  annotate("text", x = 22, y = 0.82 ,label = "1 parent", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(4)],  size = 12, family = "spec-font") +
+  annotate("text", x = 22, y = 0.76 ,label = "present", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(4)],  size = 12, family = "spec-font") +
   annotate("text", x = 25, y = 0.22, label = "2 parents", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(5)],  size = 12, family = "spec-font") +
   annotate("text", x = 25, y = 0.16, label = "present", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(5)],  size = 12, family = "spec-font") +
   
   
-  labs(x = "Temperature (\u00B0C)", y = "Probability", colour = " ") +
+  labs(x = "Temperature (\u00B0C)", y = "Attendance probability", colour = " ") +
   
   theme_bw() +
   theme_sets +
@@ -235,15 +243,16 @@ p2
 
 ggarrange(p1,p2,
           labels = c("a.", "b."),
-          font.label = list(size = 50, face = "plain", family = "spec-font"))
+          font.label = list(size = 50, face = "plain", family = "spec-font"), common.legend = T, legend = "bottom")
 
-ggsave("figures/attendance.png", width = 18.5, height = 9, units = "cm")
+ggsave("figures/attendance.png", width = 18.5, height = 9.5, units = "cm")
 
 
 # check probabilities for both partners being present
 mean(plotDF$prob[plotDF$group == 2 & plotDF$temp == min(plotDF$temp)])
 mean(plotDF$prob[plotDF$group == 2 & plotDF$temp == max(plotDF$temp)])
 max(plotDF$temp)
+min(plotDF$temp)
 
 
 
@@ -558,7 +567,7 @@ tab_df(dredge_res,
 
 
 mod_egg_final = coxph(Surv(time1, time2, status) ~ pspline(air_temp),
-                            data = df_egg, cluster = Pair_attempt, na.action = "na.fail")
+                      data = df_egg, cluster = Pair_attempt, na.action = "na.fail")
 
 
 ### plot effect ###
@@ -611,7 +620,7 @@ df_chick$time2 = df_chick$time2 - df_chick$day0
 
 
 mod_chick_full = coxph(Surv(time1, time2, status) ~ yearF + ledgeSun + cloudF + pspline(air_temp), 
-                     data = df_chick, cluster = Pair_attempt, na.action = "na.fail")
+                       data = df_chick, cluster = Pair_attempt, na.action = "na.fail")
 summary(mod_chick_full)
 
 # test for proportional hazards

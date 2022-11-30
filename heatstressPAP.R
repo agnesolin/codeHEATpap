@@ -58,13 +58,13 @@ theme_sets = theme(
 # load local temperature data
 temp_df = read.csv("data/Temperature_StoraKarlso.csv", sep=";")
 names(temp_df) = c("date", "temp_sun", "temp_shade")
-temp_df$time = as.POSIXlt(temp_df$date)
+temp_df$time = as.POSIXlt(temp_df$date) -  hours(1) # probe time not accounting for summer time
 temp_df$date = as.Date(temp_df$time)
 
 # load local temperature data from 2022
 temp2022 = read.csv("data/temp_2022.csv", sep = ";", fileEncoding="UTF-8-BOM")
 temp2022$time = as.POSIXlt(temp2022$time)
-temp2022$time = as.POSIXlt(temp2022$time) -  hours(1) # mistake in time
+temp2022$time = as.POSIXlt(temp2022$time) -  hours(1) # probe time not accounting for summer time
 temp2022$date = as.Date(temp2022$time)
 
 # merge temperature datasets
@@ -76,7 +76,7 @@ temp_df = rbind(temp_df, temp2022)
 # load data
 behav = read.csv("data/thermal_behaviour.csv", sep=";", header=T, fileEncoding = 'UTF-8-BOM')
 behav$time = as.POSIXlt(paste(behav$date, behav$time))
-behav = merge(behav, temp_df, by = "time")
+behav = left_join(behav, temp_df, by = "time")
 
 # look at size of data
 range(table(paste0(behav$ledge, behav$time)))
@@ -441,7 +441,7 @@ hoburg_cloud = hoburg_cloud[hoburg_cloud$quality == "G",]
 hoburg_cloud$time = as.POSIXct(hoburg_cloud$time, format = "%Y-%m-%d %H:%M:%S")
 hoburg_cloud$h = hour(hoburg_cloud$time)
 hoburg_cloud_min = aggregate(cloudiness ~ date, data = hoburg_cloud[hoburg_cloud$h %in% 15:21,], min)
-hoburg_cloud_min$date[year(hoburg_temp_max$date)!= 2022] = as.Date(hoburg_cloud_min$date[year(hoburg_temp_max$date)!= 2022])+1 # this is so that weather variables from previous day matches up with the day that the failure is recorded (in 2022 we know exact date)
+hoburg_cloud_min$date[year(hoburg_cloud_min$date)!= 2022] = as.Date(hoburg_cloud_min$date[year(hoburg_cloud_min$date)!= 2022])+1 # this is so that weather variables from previous day matches up with the day that the failure is recorded (in 2022 we know exact date)
 
 # merge together
 df$date = as.Date(df$Date)

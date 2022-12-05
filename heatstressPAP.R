@@ -598,7 +598,7 @@ plotDF_int = data.frame(x = x,
 ggplot(plotDF_int, aes(x, y, ymin = ymin, ymax = ymax)) +
   geom_line(size = 0.3) +
   geom_ribbon(alpha = 0.2) +
-  labs(x = "Temperature (\u00B0C)", y = "Relative failure rate at the egg stage") +
+  labs(x = "Temperature (\u00B0C)", y = "Relative failure rate during incubation") +
   theme_bw() +
   theme_sets
 

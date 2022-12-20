@@ -115,12 +115,13 @@ deaths_ledge = data.frame(
   
   theme_bw() +
   
-  theme_sets 
+  theme_sets +
+    theme(strip.text = element_text(size=12))
 
 
 
 
-ggsave("figures/TempPlot.jpg", width = 18.5, height = 19, units = "cm")
+ggsave("figures/TempPlot.pdf", width = 18.5, height = 19, units = "cm")
   
 
 rm(max_sun, max_shade, max_temp, egg_date, hatch_date, breeding_dates)

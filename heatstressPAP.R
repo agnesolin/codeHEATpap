@@ -36,15 +36,7 @@ theme_sets = theme(
   text = element_text(family = "spec-font"),
   panel.grid.major = element_blank(),
   panel.grid.minor = element_blank(),
-  axis.title.x = element_text(size = 32),
-  axis.title.y = element_text(size = 32),
   strip.background = element_rect(fill = "grey90"),
-  legend.text = element_text(size = 30),
-  legend.title = element_text(size = 30),
-  
-  strip.text.x = element_text(size = 38),
-  axis.text.x = element_text(size = 28),
-  axis.text.y = element_text(size = 28),
   legend.key.width = unit(0.5,"cm"),
   legend.key.height  = unit(0.5,"cm"),
   legend.spacing = unit(0, "cm")
@@ -143,10 +135,8 @@ ggplot2::ggplot()+
   theme_sets  +
   guides(colour = guide_legend(title.position="top", title.hjust = 0.5)) +
   
-  ggplot2::theme(strip.text.x=element_text(size = 40, hjust=0.01),
+  ggplot2::theme(strip.text.x=element_text(size = 12, hjust=0.01),
                  strip.background=element_blank(),
-                 axis.title.x = element_text(size = 35),
-                 axis.title.y = element_text(size = 35),
                  axis.line=element_line(colour="black"),
                  legend.position = "bottom",
                  legend.margin = margin(0,1.5,0,1.5, unit="cm"),
@@ -155,7 +145,7 @@ ggplot2::ggplot()+
 
 
 
-ggsave("figures/behaviour.png", width = 18.5, height = 11, units = "cm")
+ggsave("figures/behaviour.pdf", width = 18.5, height = 11, units = "cm")
 
 
 
@@ -221,12 +211,12 @@ p2 = ggplot(plotDF, aes(x = temp, y = prob, colour = group, group = itF)) +
   
   
   # labels for diff lines
-  annotate("text", x = 17, y = 0.04, label = "no parent present", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(1)],  size = 12, family = "spec-font") +
+  annotate("text", x = 17, y = 0.04, label = "no parent present", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(1)],   family = "spec-font") +
   #annotate("text", x = 26.5, y = 0.11, label = "present", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(1)],  size = 12, family = "spec-font") +
-  annotate("text", x = 22, y = 0.82 ,label = "1 parent", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(4)],  size = 12, family = "spec-font") +
-  annotate("text", x = 22, y = 0.76 ,label = "present", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(4)],  size = 12, family = "spec-font") +
-  annotate("text", x = 25, y = 0.22, label = "2 parents", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(5)],  size = 12, family = "spec-font") +
-  annotate("text", x = 25, y = 0.16, label = "present", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(5)],  size = 12, family = "spec-font") +
+  annotate("text", x = 22, y = 0.82 ,label = "1 parent", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(4)],   family = "spec-font") +
+  annotate("text", x = 22, y = 0.76 ,label = "present", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(4)],   family = "spec-font") +
+  annotate("text", x = 25, y = 0.22, label = "2 parents", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(5)],   family = "spec-font") +
+  annotate("text", x = 25, y = 0.16, label = "present", colour = met.brewer(name="Hokusai1",n=7,type="discrete")[c(5)],  family = "spec-font") +
   
   
   labs(x = "Temperature (\u00B0C)", y = "Attendance probability", colour = " ") +
@@ -243,9 +233,9 @@ p2
 
 ggarrange(p1,p2,
           labels = c("a.", "b."),
-          font.label = list(size = 50, face = "plain", family = "spec-font"), common.legend = T, legend = "bottom")
+          font.label = list(face = "plain", family = "spec-font"), common.legend = T, legend = "bottom")
 
-ggsave("figures/attendance.png", width = 18.5, height = 9.5, units = "cm")
+ggsave("figures/attendance.pdf", width = 18.5, height = 9.5, units = "cm")
 
 
 # check probabilities for both partners being present
@@ -355,9 +345,9 @@ p2 = ggplot(data = weather_comp[hour(weather_comp$time) %in% 15:20,], aes(x = ai
 
 ggarrange(p1, p2, ncol = 2, 
           common.legend = T, legend = "bottom", 
-          labels = c("a.", "b."), font.label = list(size = 60, font = "spec-font"))
+          labels = c("a.", "b."), font.label = list(font = "spec-font"))
 
-ggsave("figures/TempComp.png", width = 18.5, height = 12, units = "cm")
+ggsave("figures/TempComp.pdf", width = 18.5, height = 12, units = "cm")
 
 
 
@@ -602,7 +592,7 @@ ggplot(plotDF_int, aes(x, y, ymin = ymin, ymax = ymax)) +
   theme_bw() +
   theme_sets
 
-ggsave("figures/survival.jpg", width = 8.5, height = 8.5, units = "cm")
+ggsave("figures/survival.pdf", width = 8.5, height = 8.5, units = "cm")
 
 
 
@@ -649,20 +639,22 @@ deaths_heatwave = rbind(deaths2020, deaths2022)
 temp_max = aggregate(temp_sun ~ date, data = temp_df, max)
 deaths_heatwave = merge(deaths_heatwave , temp_max, by = "date")
 
+deaths_heatwave$date = as.Date(deaths_heatwave$date)
 deaths_heatwave$year = year(deaths_heatwave$date)
+deaths_heatwave$yday = yday(deaths_heatwave$date)
+deaths_heatwave$yday[deaths_heatwave$year == 2020] = deaths_heatwave$yday[deaths_heatwave$year == 2020] -1 # to deal with leap year
 
-
-ggplot(deaths_heatwave, aes(date, Death)) +
+ggplot(deaths_heatwave, aes(yday, Death)) +
   
   geom_rect( 
-    aes(xmin = date-0.5, xmax = date+0.5, ymin = 0, ymax = 6.2, fill = temp_sun), alpha = 0.6) +
+    aes(xmin = yday-0.5, xmax = yday+0.5, ymin = 0, ymax = 6.2, fill = temp_sun), alpha = 0.6) +
   geom_line() +
   
   scale_fill_gradientn(colours = rev(met.brewer("Greek", 10)),
                        name = "Temperature (\u00B0C)") +
   
   
-  labs(x = "Day of year", y = "Recorded failures") +
+  labs(x = "Date", y = "Recorded failures") +
   
   facet_wrap(~ year
              ,
@@ -671,13 +663,16 @@ ggplot(deaths_heatwave, aes(date, Death)) +
                                      "2020" = "a. 2020",
                                      
                                      "2022" = "b. 2022")),
-             scale = "free_x",
+             #scale = "free_x",
              ncol = 1) +
   
+  scale_x_continuous(breaks = c(135, 152, 166, 182, 196), labels = c("15 May", "1 Jun", "15 Jun", "1 July", "15 July")) +
+  
   theme_bw() +
-  theme_sets
+  theme_sets +
+  theme(strip.text = element_text(size=12))
 
-ggsave("figures/plot2020.jpg", width = 18.5, height = 12, units = "cm")
+ggsave("figures/plotHEATWAVE.pdf", width = 18.5, height = 12, units = "cm")
 
 
 
